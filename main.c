@@ -11,29 +11,31 @@
 
 typedef enum
 {
-    SUCCESS,          // нет ошибок
-    OPEN_ERROR,       // ошибка в отсутствие закрывающей скобки
-    OPEN_CLOSE_ERROR, // встречена не соответствующая закрывающая скобка
-    CLOSE_ERROR,      // ошибка в отсутствие закрывающей скобки
+    SUCCESS,    // нет ошибок
+    OPEN_ERROR, // отсутствует закрывающая скобка
+    CLOSE_ERROR // для встреченной закрывающей скобки нет подходящей по типу предшествующей скобки
 } EXIT_CODE;
 
 static Stack stack;
 
 static const char bracket[] = {"(){}[]"};
 
-EXIT_CODE bracketCheck(const char *str, uint8_t *errBracketType, uint32_t* errSymbolInd)
+EXIT_CODE bracketCheck(const char *str, uint8_t *errBracketType, uint16_t *errSymbolInd)
 {
     initStack(&stack);
     uint8_t curOpenBracket;
 
     for (int i = 0; i < strlen(str); i++)
     {
+        // проверка что встреченный символ скобка
         char *isBracket = strchr(bracket, str[i]);
         if (!isBracket)
             continue;
 
+        // по индексу в строке определяем текущую скобку
         int currBracket = isBracket - bracket;
 
+        // любую открывающую скобку помещаем в стек
         if (currBracket % 2 == 0)
         {
             push(&stack, i);
@@ -41,17 +43,20 @@ EXIT_CODE bracketCheck(const char *str, uint8_t *errBracketType, uint32_t* errSy
         }
         else
         {
-            if ((currBracket - curOpenBracket) != 1)
+            // проверяем что найдена закрывающая скобка имеет соответствующую открывающую скобку
+            if (isEmpty(&stack) || (currBracket - curOpenBracket) != 1)
             {
-                *errBracketType = curOpenBracket;
-                *errSymbolInd = top(&stack);
-                return OPEN_CLOSE_ERROR;
+                *errBracketType = currBracket;
+                *errSymbolInd = i;
+                return CLOSE_ERROR;
             }
+
+            pop(&stack);
         }
     }
-    if (isEmpty(&stack))
+    if (!isEmpty(&stack))
     {
-        errBracketType
+        return OPEN_ERROR   
     }
     return SUCCESS;
 }

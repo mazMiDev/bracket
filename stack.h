@@ -1,10 +1,11 @@
 #include <stdbool.h>
+#include <stdint.h>
 
 #define MAX_SIZE_STACK 100
 
 typedef struct
 {
-    char data[MAX_SIZE_STACK];
+    uint16_t data[MAX_SIZE_STACK];
     int top;
 } Stack;
 
