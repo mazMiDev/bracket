@@ -9,14 +9,13 @@
 #include <stdbool.h>
 #include "stack.h"
 
-typedef enum
-{
+typedef enum {
     SUCCESS = 0,    // нет ошибок
     OPEN_ERROR = 1, // отсутствует закрывающая скобка
     CLOSE_ERROR = 2 // для встреченной закрывающей скобки нет подходящей по типу предшествующей скобки
-} EXIT_CODE;
+} ValidationCode;
 
-static const char bracket[] = {"(){}[]"};
+static const char bracket[] = { "(){}[]" };
 
 void printMenu()
 {
@@ -28,65 +27,75 @@ void printMenu()
     printf(" -c\t-  input string via console\n");
 }
 
-EXIT_CODE bracketCheck(const char *str, uint8_t *errBracketType, uint16_t *errSymbolInd)
+void printResult(ValidationCode valC, uint8_t brType, uint32_t symbolI)
+{
+    switch (valC) {
+        case 0:
+            printf("No errors in parentheses were found!\n");
+            break;
+        case 1:
+            printf("No matching closing bracket was found for the opening bracket \"%c\" at position %d.", bracket[brType], symbolI);
+            break;
+        case 2:
+            printf("No matching opening bracket was found for the closeing bracket \"%c\" at position %d.", bracket[brType], symbolI);
+            break;
+        default:
+            break;
+    }
+}
+
+ValidationCode bracketCheck(const char* str, uint8_t* errBracketType, uint32_t* errSymbolInd)
 {
     static Stack openBracketInd;
     initStack(&openBracketInd);
+
     uint8_t curOpenBracket;
 
-    for (int i = 0; i < strlen(str) - 1; i++)
-    {
+    for (int i = 0; i < strlen(str) - 1; i++) {
         // проверка что встреченный символ скобка
-        char *isBracket = strchr(bracket, str[i]);
+        char* isBracket = strchr(bracket, str[i]);
         if (!isBracket)
             continue;
-
         // по индексу в строке определяем текущую скобку
         int currBracket = isBracket - bracket;
-
         // любую открывающую скобку помещаем в стек
-        if (currBracket % 2 == 0)
-        {
+        if (currBracket % 2 == 0) {
             push(&openBracketInd, i);
             curOpenBracket = currBracket;
         }
-        else
-        {
+        else {
             // проверяем что найдена закрывающая скобка имеет соответствующую открывающую скобку
-            if (isEmpty(&openBracketInd) || (currBracket - curOpenBracket) != 1)
-            {
+            if (isEmpty(&openBracketInd) || (currBracket - curOpenBracket) != 1) {
                 *errBracketType = currBracket;
                 *errSymbolInd = i;
                 return CLOSE_ERROR;
             }
-
             pop(&openBracketInd);
         }
     }
-    if (!isEmpty(&openBracketInd))
-    {
+
+    if (!isEmpty(&openBracketInd)) {
+        *errBracketType = curOpenBracket;
+        *errSymbolInd = top(&openBracketInd);
         return OPEN_ERROR;
     }
     return SUCCESS;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    if (argc < 2 || argc > 3)
-    {
+    if (argc < 2 || argc > 3) {
         printf("Error: Invalid number of parameters\nTo get help use -h or --help");
         return 1;
     }
 
-    EXIT_CODE code;
+    ValidationCode validCode = 0;
 
     if (!strcmp(argv[1], "-h"))
         printHelp();
-    else if (!strcmp(argv[1], "-f") && argv[2] != NULL)
-    {
-        FILE *input = fopen(argv[2], "r");
-        if (input == NULL)
-        {
+    else if (!strcmp(argv[1], "-f") && argv[2] != NULL) {
+        FILE* input = fopen(argv[2], "r");
+        if (input == NULL) {
             perror("Failed to open input file");
             return 1;
         }
@@ -94,36 +103,21 @@ int main(int argc, char *argv[])
         uint8_t errBracketType;
         uint16_t errSymbolInd;
         char str[MAX_SIZE_STACK];
-        while (!feof(input))
-        {
+        while (!feof(input) && !validCode) {
             fgets(str, sizeof(str) - 1, input);
-            code = bracketCheck(str, &errBracketType, &errSymbolInd);
+            validCode = bracketCheck(str, &errBracketType, &errSymbolInd);
         }
 
         fclose(input);
-        printf("Conversion completed\n");
     }
-    else if (!strcmp(argv[1], "-c") && argv[2] == NULL)
-    {
+
+    else if (!strcmp(argv[1], "-c") && argv[2] == NULL) {
         char str[MAX_SIZE_STACK];
         printf("Conversion completed\n");
     }
-    else
-    {
+    else {
         printf("Error: Invalid parameter\nTo get help use -h or --help");
         return 1;
-    }
-
-    switch (code)
-    {
-    case 1:
-        /* code */
-        break;
-    case 2:
-        /* code */
-        break;
-    default:
-        break;
     }
 
     return 0;
