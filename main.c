@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include "stack.h"
 
 typedef enum {
@@ -23,6 +22,7 @@ void printMenu()
     printf(" <util_name> [STRING|OPTION] [STRING|FILE]\n");
     printf(" When using a utility without flags, the next parameter after its name must be the string to parse.\n");
     printf(" -h\t-  get help on using the utility\n");
+    printf(" -s\t-  enter the string as a program startup parameter\n");
     printf(" -f\t-  reading a string to parse from a file\n");
     printf(" -c\t-  input string via console\n");
 }
@@ -73,7 +73,7 @@ ValidationCode bracketCheck(const char* str, uint8_t* errBracketType, uint32_t* 
             pop(&openBracketInd);
         }
     }
-
+    // проверяем что не осталось открытых скобок
     if (!isEmpty(&openBracketInd)) {
         *errBracketType = curOpenBracket;
         *errSymbolInd = top(&openBracketInd);
@@ -90,9 +90,14 @@ int main(int argc, char* argv[])
     }
 
     ValidationCode validCode = 0;
+    uint8_t brType;
+    uint32_t symbolInd;
 
     if (!strcmp(argv[1], "-h"))
         printHelp();
+    else if (!strcmp(argv[1], "-s") && argv[2] != NULL) {
+        validCode = bracketCheck(argv[2], &brType, &symbolInd);
+    }
     else if (!strcmp(argv[1], "-f") && argv[2] != NULL) {
         FILE* input = fopen(argv[2], "r");
         if (input == NULL) {
@@ -100,25 +105,24 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        uint8_t errBracketType;
-        uint16_t errSymbolInd;
         char str[MAX_SIZE_STACK];
         while (!feof(input) && !validCode) {
             fgets(str, sizeof(str) - 1, input);
-            validCode = bracketCheck(str, &errBracketType, &errSymbolInd);
+            validCode = bracketCheck(str, &brType, &symbolInd);
         }
 
         fclose(input);
     }
-
     else if (!strcmp(argv[1], "-c") && argv[2] == NULL) {
         char str[MAX_SIZE_STACK];
-        printf("Conversion completed\n");
+        scanf("Enter a string to analyze: %s",str);
     }
     else {
         printf("Error: Invalid parameter\nTo get help use -h or --help");
         return 1;
     }
+
+    printResult(validCode, brType, symbolInd);
 
     return 0;
 }
